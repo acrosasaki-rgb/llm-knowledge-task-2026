@@ -1,0 +1,48 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  personHasCityOfDeath: The ground truth is the place of death stored in Wikidata
+    (property P20, the same place shown in the 'Died' line of the Wikipedia infobox)
+    for the person with exactly this name. That stored value is a city or town, not
+    the county, region, state, or country that contains it. Recall that stored place
+    and give its common English name. If the person is still alive or Wikidata records
+    no place of death for them, return an empty list.
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

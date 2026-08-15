@@ -1,0 +1,69 @@
+name: qwen3.5-27b-thinking-empty-aware-20-tuned-2048-plus-128
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+# Aggregation is the measured best on the 20-candidate thinking validation
+# pool (BF16 external run; BF16 vs Q4_K_M scored 0.5663 vs 0.5662 on the
+# identical validation pipeline, so the pool stands in for the Q4 serving
+# stack). Overall validation Macro F1 with this block: 0.5881 against 0.5662
+# for the 5-candidate baseline aggregation. Per-parameter evidence:
+# - awardWonBy 0.05: macro F1 falls monotonically with the threshold
+#   (0.1722 at >=1/20 votes vs 0.1491 at the shipped 0.2); gold sets average
+#   146 entities, so recall dominates and frequency filtering only hurts.
+# - companyTradesAtStockExchange 0.6 + empty_majority 10: empty_majority is
+#   an absolute vote count and must scale with num_candidates; 9-13 of 20 is
+#   a robust plateau (~50%, matching 3-of-5), and the higher acceptance
+#   threshold helps because most listed subjects trade on one or two
+#   exchanges (0.7686 vs 0.7152 with the 5-candidate parameters).
+# - hasCapacity dominant_cluster: the correct value is present in 55/100
+#   rows but is a minority island; the largest 5% cluster keeps 28 rows vs
+#   24 for the median (#23; the metadata judge scored 26 and logprob
+#   confidence showed no discriminative power, #20). Cluster selection is
+#   adopted only at 20 candidates: on the 5-candidate pool it scores 23,
+#   below the median's 24.
+# - forced_weight 0.5 (hasCapacity, personHasCityOfDeath): budget-exhausted
+#   candidates skew toward given-up empty answers; down-weighting their votes (0.4; 0.5 sits on an exact vote tie)
+#   flips person rows where a naturally-finished candidate had generated the
+#   correct city (0.45 -> 0.47) and one hasCapacity cluster (0.28 -> 0.29),
+#   robust across weight choices 0/0.25/0.5. companyTrades and hasArea do
+#   not benefit and keep unweighted votes. Overall: 0.5881 -> 0.5943.
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+    forced_weight: 0.4
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true
+    forced_weight: 0.4

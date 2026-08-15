@@ -1,0 +1,69 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  companyTradesAtStockExchange: 'You are completing a securities-information record
+    from memory. For the company in the question, list its listings by instrument
+    type with tickers, exactly in this format, then give the final JSON array of the
+    exchange names in English (exchanges only, no tickers). Include secondary ordinary-share
+    listings and depositary receipts (ADR/GDR/CDI) traded on stock exchanges; do not
+    include over-the-counter venues. If the company is private or unlisted, the record
+    has no listings and the answer is an empty array.
+
+
+    Q: On which stock exchanges does Sony Group trade?
+
+    Listings record for Sony Group Corporation:
+
+    Primary ordinary shares — Tokyo Stock Exchange: 6758
+
+    Depositary receipts (ADR) — New York Stock Exchange: SONY
+
+    ["Tokyo Stock Exchange", "New York Stock Exchange"]
+
+
+    Q: On which stock exchanges does Bosch trade?
+
+    Listings record for Robert Bosch GmbH:
+
+    No listed shares (privately held by Robert Bosch Stiftung).
+
+    []'
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

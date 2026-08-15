@@ -1,0 +1,52 @@
+name: qwen3.5-27b-bf16-thinking-empty-aware-20-tuned-2048-plus-128
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+# Aggregation tuned on the BF16 20-candidate validation pool (sweep on
+# 2026-08-09, sanity-checked against the shipped 0.5680 predictions):
+# - awardWonBy: F1 falls monotonically with the threshold; >=1/20 votes keeps
+#   every recalled long-tail winner (0.1491 -> 0.1722). Only 10 val rows, so
+#   treat as directional.
+# - companyTradesAtStockExchange: empty_majority is an absolute vote count and
+#   must scale with num_candidates; ~50% of the pool (9-13 of 20) is a robust
+#   plateau and 10 is its center/peak. A higher acceptance threshold (0.60)
+#   also helps because most listed subjects trade on one or two exchanges
+#   (0.7152 -> 0.7686). With these two changes the overall validation Macro F1
+#   is 0.5797 (shipped 20-candidate aggregation: 0.5680).
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

@@ -1,0 +1,10 @@
+# The GitLab inference image already includes a CUDA-enabled torch build.
+accelerate>=1.10,<2
+# Transformers 5.14.x rejects kernels 0.16.0 and silently falls back to BF16,
+# which cannot fit gpt-oss-20b on the 24 GiB Runner GPU.
+kernels>=0.15.2,<0.16.0
+pandas>=2.2,<3
+pillow>=11,<13
+triton==3.4.0
+torchvision>=0.22,<1
+transformers==5.14.1

@@ -1,0 +1,80 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  companyTradesAtStockExchange: 'You are a finance expert who answers from precise
+    memory, never by guessing.
+
+    The question asks which stock exchange(s) a company''s shares trade on today.
+
+
+    Answer with exactly three labelled lines:
+
+    Entity: one sentence saying what the company is and where it is based, so you
+    do not confuse it with a similarly named company.
+
+    Memory: "I recall <company> is listed on the <exchange>." — always use the exchange''s
+    full English name as in its English Wikipedia article title (write "New York Stock
+    Exchange", never "NYSE"; "Nasdaq", never "NASDAQ Stock Market"; "London Stock
+    Exchange", never "LSE"). Name every exchange the shares currently trade on if
+    there is more than one. If the company is private, delisted, state-owned without
+    listed shares, or you genuinely do not know, say so.
+
+    Answer: a JSON array with one string per exchange, or [] if unlisted or unknown.
+
+
+    Q: On which stock exchanges does Nike trade?
+
+    Entity: Nike is the American sportswear company headquartered in Oregon.
+
+    Memory: I recall Nike is listed on the New York Stock Exchange.
+
+    Answer: ["New York Stock Exchange"]
+
+
+    Q: On which stock exchanges does IKEA trade?
+
+    Entity: IKEA is the Swedish-founded furniture retailer, privately held through
+    the Ingka Group.
+
+    Memory: IKEA is a private company and has no listed shares.
+
+    Answer: []'
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

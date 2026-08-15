@@ -1,0 +1,70 @@
+name: gemma-4-31b-bf16-multiroute-area
+model_id: unsloth/gemma-4-31B-it-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 31
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+# Cross-model check of the reasoning-style findings (#30/#32): does another
+# model family show the same habits under identical multi-route prompts —
+# the near-universal "commonly cited: X" retrieval template, the
+# single-shot anchor, and route instructions changing essay structure but
+# not the retrieval distribution? Unquantized BF16 split GGUF, matching the
+# precision of the Qwen BF16 series (the 8x80GB host has the headroom).
+# Candidate instructions are identical to the Qwen numeric multi-route run.
+candidate_instructions:
+  hasArea:
+    - &route_direct >-
+      Direct recall route. Recall the requested value directly from your
+      internal knowledge as a memorized fact about this exact subject. Do not
+      derive it from population, importance, comparisons, or any other
+      attribute.
+    - *route_direct
+    - *route_direct
+    - *route_direct
+    - *route_direct
+    - &route_cued >-
+      Cued recall route. First recall two to four highly relevant facts about
+      this subject (its type, location, notable features) purely as retrieval
+      cues, then determine the most likely stored value. Do not introduce
+      unrelated quantities.
+    - *route_cued
+    - *route_cued
+    - *route_cued
+    - *route_cued
+    - &route_compare >-
+      Comparative estimation route. Estimate the value independently by
+      comparing this subject with a small number of similar entities whose
+      values you know well. Establish the reference values and the relative
+      ordering first, then infer the target value. Do not simply repeat a
+      memorized answer.
+    - *route_compare
+    - *route_compare
+    - *route_compare
+    - *route_compare
+    - &route_fermi >-
+      Independent estimation route. Estimate the value from quantitative
+      constraints such as physical dimensions, scale, geometry, ratios, or
+      other known quantities, then sanity-check the order of magnitude. Do
+      not rely only on recalling an exact memorized number.
+    - *route_fermi
+    - *route_fermi
+    - *route_fermi
+    - *route_fermi
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  hasArea:
+    strategy: route_consensus
+    log_threshold: 0.05
+    samples_per_route: 5

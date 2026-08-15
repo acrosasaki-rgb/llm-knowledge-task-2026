@@ -1,0 +1,50 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  companyTradesAtStockExchange: 'List every stock exchange where this company''s shares
+    are listed today, not only the primary exchange: include secondary and regional
+    listings, cross-listings abroad, depositary-receipt (ADR/GDR) listings such as
+    the New York Stock Exchange or Nasdaq for non-US companies, and over-the-counter
+    venues such as OTC Markets Group. Many companies are listed on two or more venues,
+    so before answering, check each major region (home exchange, United States, other
+    regions) for a listing. If the company is private, delisted, or has no listed
+    shares, return an empty list.'
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

@@ -1,0 +1,34 @@
+name: qwen3.5-27b-mtp-q4-k-m-thinking-5-2048-plus-128
+model_id: unsloth/Qwen3.5-27B-MTP-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 5
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.2
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.4
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+  hasArea:
+    strategy: median
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority

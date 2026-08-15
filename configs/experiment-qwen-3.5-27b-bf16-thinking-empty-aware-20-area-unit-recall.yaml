@@ -1,0 +1,60 @@
+name: qwen3.5-27b-bf16-thinking-empty-aware-20-area-unit-recall
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+# Intervention under test (think-sample analysis, 2026-08-12): correct hasArea
+# candidates recalled the figure in its source-native unit (hectares for
+# Hashima) and converted, while wrong ones recalled a km2 surface form with a
+# misplaced decimal. Wikipedia prose states sub-km2 areas in ha/m2/acres, so
+# the km2 form is the rarest representation in training text. The instruction
+# below asks for source-native recall followed by an explicit conversion.
+# Everything else (seed, sampling, few-shot, budget) matches the BF16
+# 20-candidate baseline pool (hasArea oracle 78/100, unit_equivalence 62/100).
+relation_instructions:
+  hasArea: >-
+    The question asks for an area in square kilometers, but written sources
+    usually state small areas in other units such as hectares, square meters,
+    acres, or square miles. First recall the area figure in the unit the
+    source you remember uses, then convert it to square kilometers
+    (1 hectare = 0.01 km2; 1,000,000 m2 = 1 km2;
+    1 square mile = 2.589988 km2; 1 acre = 0.004047 km2), and return only the
+    converted numeric value. Keep the decimal point exact during the
+    conversion.
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.2
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

@@ -1,0 +1,47 @@
+name: qwen3.5-27b-bf16-thinking-empty-aware-20-think-sample
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+# The only difference from the 20-candidate BF16 baseline: candidate
+# diagnostics keep the full raw output, thinking included, so correct and
+# wrong candidates can be compared qualitatively. Candidate seeds derive from
+# (seed, subject, relation, candidate_index), so this run reproduces the
+# baseline pool's sampling for the selected rows.
+save_raw_text: true
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.2
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

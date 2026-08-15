@@ -1,0 +1,61 @@
+name: qwen3.5-27b-bf16-thinking-empty-aware-20-area-grounding-step
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+# Grounding (#29) plus an explicit step-by-step procedure (#33). Direct test
+# of zero-shot-CoT-style prompting on a recall-bound task where thinking is
+# already enabled: the #27-#30 mechanism analysis (single-shot anchor recall,
+# confabulated verification) predicts no significant change vs the plain
+# grounding arm (oracle 82, median 63). Sampling, seeds, few-shot, and the
+# thinking budget stay identical to the baseline pool.
+relation_instructions:
+  hasArea: >-
+    The ground truth is the area value stored in Wikidata (property P2046,
+    the same value shown in the Wikipedia infobox) for the entity with
+    exactly this name. Think step by step, strictly in this order:
+    (1) identify which exact entity this name refers to;
+    (2) recall the area figure stored in that entity's Wikipedia infobox and
+    Wikidata entry, in its original unit;
+    (3) convert it to square kilometers only if that unit is not already
+    square kilometers (1 hectare = 0.01 km2; 1,000,000 m2 = 1 km2;
+    1 square mile = 2.589988 km2; 1 acre = 0.004047 km2);
+    (4) sanity-check that the order of magnitude fits the entity's size;
+    and only then return the resulting numeric value in square kilometers.
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.2
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

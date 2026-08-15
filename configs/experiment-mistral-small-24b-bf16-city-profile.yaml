@@ -1,0 +1,69 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  personHasCityOfDeath: 'Before this death-place question can be answered, the person
+    must be identified. Your task in this step is identification only — do NOT name
+    a city.
+
+    Answer with exactly one sentence followed by a JSON array:
+
+    Who: one sentence saying who the person this name most commonly refers to is —
+    occupation, nationality, and approximate life years or active period.
+
+    Then output a JSON array with one string of the form "occupation; nationality;
+    years".
+
+
+    Q: In which city did James Gandolfini die?
+
+    Who: James Gandolfini was an American actor, best known for The Sopranos, who
+    lived 1961-2013.
+
+    ["actor; American; 1961-2013"]
+
+
+    Q: In which city did Ada Lovelace die?
+
+    Who: Ada Lovelace was an English mathematician and writer on Babbage''s Analytical
+    Engine, who lived 1815-1852.
+
+    ["mathematician; English; 1815-1852"]'
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

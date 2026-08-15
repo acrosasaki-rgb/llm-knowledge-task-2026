@@ -1,0 +1,32 @@
+name: deepseek-r1-0528-qwen3-8b-self-consistency-5
+model_id: deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+backend: causal
+parameter_count_billion: 8
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 1024
+num_candidates: 5
+torch_dtype: auto
+device_map: auto
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.5
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+  hasArea:
+    strategy: median
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority

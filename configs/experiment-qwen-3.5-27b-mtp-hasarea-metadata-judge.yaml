@@ -1,0 +1,67 @@
+name: qwen3.5-27b-mtp-q4-k-m-hasarea-metadata-judge-no-thinking
+model_id: unsloth/Qwen3.5-27B-MTP-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 128
+num_candidates: 20
+enable_thinking: false
+relation_thinking:
+  countryLandBordersCountry: false
+  companyTradesAtStockExchange: false
+  hasArea: false
+  personHasCityOfDeath: false
+  hasCapacity: false
+  awardWonBy: false
+candidate_audits:
+  hasArea:
+    kind: area_metadata_only
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+relation_instructions:
+  countryLandBordersCountry: |
+    For countryLandBordersCountry, first verify that the object countries share a direct land border with the subject country. Exclude maritime borders and nearby countries without a land border. If the subject has no direct land-border countries, return [].
+  companyTradesAtStockExchange: |
+    For companyTradesAtStockExchange, first verify whether the subject entity itself is publicly traded. Do not use a parent company, brand owner, subsidiary, predecessor, successor, or related company exchange unless that exact subject entity trades there. If the subject itself is private or not traded, return [].
+  hasArea: |
+    For hasArea, return the subject's total area in square kilometers as one numeric string. This relation is expected to have a non-empty numeric answer.
+  personHasCityOfDeath: |
+    For personHasCityOfDeath, return [] only when the person is alive or there is evidence that no death city exists. If deceased, return the death city or locality only. Do not substitute birthplace, residence, region, or country. Lack of recall alone is not evidence that the person is alive.
+  hasCapacity: |
+    For hasCapacity, return the maximum spectator capacity as one integer string. This relation is expected to have a non-empty numeric answer.
+  awardWonBy: |
+    For awardWonBy, return recipient entities, not works or award names. Avoid predecessor, successor, nominee, rescinded, or indirectly related entities. This relation is expected to have a non-empty answer when known.
+system_prefix: |
+  Before the final JSON array, use reasoning only when thinking is enabled for this relation:
+  1. Confirm the relation meaning and scope from the official relation definition.
+  2. For relations where empty can be correct, decide whether the object set is truly empty.
+  3. Do not use lack of recall alone as evidence for [].
+  4. If non-empty, retrieve only objects that satisfy the relation.
+  5. The final answer must be a JSON string array only.
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.4
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: metadata_judge
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

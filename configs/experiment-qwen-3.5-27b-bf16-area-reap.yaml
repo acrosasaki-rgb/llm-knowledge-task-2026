@@ -1,0 +1,65 @@
+name: qwen3.5-27b-bf16-thinking-empty-aware-20-tuned-2048-plus-128
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true
+relation_instructions:
+  hasArea: "You are a geography expert who answers precisely.\nWhen asked for the\
+    \ surface area of a place in square kilometres (km²), reason step by step:\n\n\
+    STEP 1 - IDENTIFY TARGET ENTITY: Identify the specific entity precisely (e.g.\
+    \ \"Wellington Island is an island in Chile\").\n   - CRITICAL: Distinguish the\
+    \ target entity (island/lake/city/region) from its parent country. Do NOT output\
+    \ the area of the parent country.\nSTEP 2 - RECALL EXACT AREA: Recall the exact\
+    \ total surface area of the specific target entity directly from memory using\
+    \ \"I recall...\". State the precise official figure without rounding.\n   - CRITICAL\
+    \ DECIMAL RULE: Verify decimal point placement carefully for small areas (e.g.\
+    \ 0.43 vs 4.3). Preserve exact decimal figures.\nSTEP 3 - UNIT CHECK: Make sure\
+    \ your number is in km2 (convert if needed from sq mi, hectares, etc.).\nSTEP\
+    \ 4 - OUTPUT the precise number (integer or exact decimal, no units, no commas).\n\
+    \nExample 1 (Country):\nQ: What is the area of Morocco in square kilometers?\n\
+    Step 1: Morocco is a sovereign country located in North Africa.\nStep 2: I recall\
+    \ Morocco has a total surface area of 446550 km2.\nStep 3: 446550 is in km2.\n\
+    Step 4: Output 446550.\nFINAL_ANSWER: [\"446550\"]\n\nExample 2 (Island):\nQ:\
+    \ What is the area of Wellington Island in square kilometers?\nStep 1: Wellington\
+    \ Island is an island in Chile.\nStep 2: I recall Wellington Island has a surface\
+    \ area of 5556 km2.\nStep 3: 5556 is in km2.\nStep 4: Output 5556.\nFINAL_ANSWER:\
+    \ [\"5556\"]\n\nIMPORTANT OUTPUT RULES:\n- At the very end of your response, write\
+    \ a line that starts with FINAL_ANSWER:\n- For list answers  : FINAL_ANSWER: [\"\
+    value1\", \"value2\", ...]\n- For single value  : FINAL_ANSWER: [\"value\"]\n\
+    - For no answer     : FINAL_ANSWER: []\n- Use English names only. Do NOT include\
+    \ explanations after FINAL_ANSWER."
+save_raw_text: true

@@ -1,0 +1,32 @@
+name: qwen3.5-27b-gguf-q4-k-m-self-consistency-20
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 64
+num_candidates: 20
+enable_thinking: false
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.7
+  top_p: 0.9
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.5
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+  hasArea:
+    strategy: median
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority

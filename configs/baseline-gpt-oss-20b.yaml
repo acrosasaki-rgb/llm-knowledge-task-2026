@@ -1,0 +1,16 @@
+name: gpt-oss-20b
+model_id: openai/gpt-oss-20b
+backend: causal
+parameter_count_billion: 20
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# Harmony reasoning tokens are part of the generation budget, so this follows
+# the official gpt-oss Transformers example rather than Qwen's 64-token limit.
+max_new_tokens: 256
+system_prefix: "Reasoning: low"
+torch_dtype: auto
+device_map: auto
+generation:
+  do_sample: false

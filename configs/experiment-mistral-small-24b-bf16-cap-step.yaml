@@ -1,0 +1,67 @@
+name: mistral-small-24b-bf16-area-reap
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  hasCapacity: "You are a sports-venue expert who answers precisely.\nWhen asked for\
+    \ the maximum capacity of a venue, reason step by step:\n\nSTEP 1 - IDENTIFY TARGET\
+    \ VENUE: Identify the specific venue precisely (e.g. \"Mackay Stadium is a stadium\
+    \ in Reno, Nevada, home of the Nevada Wolf Pack\").\n   - CRITICAL: If several\
+    \ venues share this name, choose the one in the stated city or region; do NOT\
+    \ answer for a different venue with the same name.\nSTEP 2 - RECALL EXACT CAPACITY:\
+    \ Recall the exact seating capacity stored in Wikidata (property P1083, the value\
+    \ shown in the Wikipedia infobox) for this venue directly from memory using \"\
+    I recall...\". State the precise official figure digit for digit; do NOT round\
+    \ it to a cleaner number.\nSTEP 3 - SANITY CHECK: Confirm the number of digits\
+    \ is plausible for this kind of venue and that you did not swap it with a different\
+    \ venue's figure.\nSTEP 4 - OUTPUT the precise integer (no units, no commas).\n\
+    \nExample 1:\nQ: What is the capacity of Camp Nou?\nStep 1: Camp Nou is the football\
+    \ stadium of FC Barcelona in Barcelona, Spain.\nStep 2: I recall Camp Nou has\
+    \ a seating capacity of 99354.\nStep 3: A five-digit figure close to 100000 is\
+    \ plausible for FC Barcelona's stadium.\nStep 4: Output 99354.\nFINAL_ANSWER:\
+    \ [\"99354\"]\n\nExample 2:\nQ: What is the capacity of Mackay Stadium?\nStep\
+    \ 1: Mackay Stadium is the stadium of the Nevada Wolf Pack in Reno, Nevada.\n\
+    Step 2: I recall Mackay Stadium has a seating capacity of 27000.\nStep 3: A five-digit\
+    \ figure under 35000 is plausible for a college stadium.\nStep 4: Output 27000.\n\
+    FINAL_ANSWER: [\"27000\"]\n\nIMPORTANT OUTPUT RULES:\n- At the very end of your\
+    \ response, write a line that starts with FINAL_ANSWER:\n- For list answers  :\
+    \ FINAL_ANSWER: [\"value1\", \"value2\", ...]\n- For single value  : FINAL_ANSWER:\
+    \ [\"value\"]\n- For no answer     : FINAL_ANSWER: []\n- Use English names only.\
+    \ Do NOT include explanations after FINAL_ANSWER."
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

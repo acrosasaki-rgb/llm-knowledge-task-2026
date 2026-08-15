@@ -1,0 +1,200 @@
+name: qwen3.5-27b-bf16-string-multiroute
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+# Multi-route elicitation (#30) adapted to the four string relations
+# (278 validation rows), layered on the Wikidata/Wikipedia grounding cue that
+# produced the best hasArea pool (#29). The relation_instructions ground every
+# route in the stored Wikidata statement / Wikipedia article for the exact
+# subject; the candidate_instructions vary the retrieval path on top. Route
+# identity of candidate i is i // 5. FinalSelection uses the tuned
+# aggregation; cross-route analyses are offline reaggregations.
+relation_instructions:
+  awardWonBy: >-
+    The ground truth is the set of recipients recorded on Wikidata and in the
+    Wikipedia article about this exact award (including its list of winners).
+    Recall recipients as they are recorded there, using the names the
+    articles use.
+  countryLandBordersCountry: >-
+    The ground truth is the "shares border with" information stored in
+    Wikidata (property P47) and the Wikipedia article of this exact country,
+    restricted to land borders. Maritime-only neighbors are excluded.
+  companyTradesAtStockExchange: >-
+    The ground truth is the stock exchange(s) recorded on Wikidata (property
+    P414) and in the Wikipedia infobox ("Traded as") of this exact company as
+    of mid-2026, reflecting delistings. Companies without a public listing
+    have an empty answer.
+  personHasCityOfDeath: >-
+    The ground truth is the place of death stored in Wikidata (property P20)
+    and stated in the Wikipedia article of this exact person, at city
+    granularity. If the person is alive or no city is recorded, the answer is
+    empty.
+candidate_instructions:
+  awardWonBy:
+    - &award_direct >-
+      Direct recall route. List the recipients you directly remember for this
+      exact award. Do not infer recipients from fame or from related awards.
+    - *award_direct
+    - *award_direct
+    - *award_direct
+    - *award_direct
+    - &award_cued >-
+      Cued recall route. First recall the award's field, awarding country or
+      organization, and active period as retrieval cues, then enumerate the
+      recipients those cues bring to mind.
+    - *award_cued
+    - *award_cued
+    - *award_cued
+    - *award_cued
+    - &award_decades >-
+      Decade-walk route. Enumerate recipients by working backward in time
+      from the most recent edition, decade by decade, listing the winners you
+      remember for each period.
+    - *award_decades
+    - *award_decades
+    - *award_decades
+    - *award_decades
+    - &award_verify >-
+      Adjacent-knowledge route. Recall notable figures of the award's field
+      and, for each one you consider, check your memory of them actually
+      receiving this exact award; include only recipients that pass this
+      check.
+    - *award_verify
+    - *award_verify
+    - *award_verify
+    - *award_verify
+  countryLandBordersCountry:
+    - &border_direct >-
+      Direct recall route. List the land-bordering countries you directly
+      remember for this exact country.
+    - *border_direct
+    - *border_direct
+    - *border_direct
+    - *border_direct
+    - &border_cued >-
+      Cued recall route. First recall the country's continent, region, and
+      rough shape as retrieval cues, then list its land neighbors.
+    - *border_cued
+    - *border_cued
+    - *border_cued
+    - *border_cued
+    - &border_walk >-
+      Border-walk route. Mentally trace the country's land boundary in one
+      direction (for example clockwise from the north) and name each
+      neighboring country as you pass it.
+    - *border_walk
+    - *border_walk
+    - *border_walk
+    - *border_walk
+    - &border_verify >-
+      Verification route. First list all plausible neighbors including
+      maritime ones, then keep only those that share an actual land border
+      and drop sea-only neighbors.
+    - *border_verify
+    - *border_verify
+    - *border_verify
+    - *border_verify
+  companyTradesAtStockExchange:
+    - &company_direct >-
+      Direct recall route. List the stock exchanges where you directly
+      remember this company's shares being publicly traded.
+    - *company_direct
+    - *company_direct
+    - *company_direct
+    - *company_direct
+    - &company_cued >-
+      Cued recall route. First recall the company's headquarters country,
+      sector, and ticker or listing history as retrieval cues, then name the
+      exchanges those cues bring to mind.
+    - *company_cued
+    - *company_cued
+    - *company_cued
+    - *company_cued
+    - &company_peers >-
+      Comparative route. Recall where similar companies from the same country
+      and sector are listed, then check which of those exchanges actually
+      list this company.
+    - *company_peers
+    - *company_peers
+    - *company_peers
+    - *company_peers
+    - &company_structure >-
+      Listing-structure route. Determine the likely primary listing from the
+      company's country of incorporation, then check for secondary or cross
+      listings and delistings; return an empty list if the company is not
+      publicly traded.
+    - *company_structure
+    - *company_structure
+    - *company_structure
+    - *company_structure
+  personHasCityOfDeath:
+    - &death_direct >-
+      Direct recall route. Recall the city of death you directly remember for
+      this exact person.
+    - *death_direct
+    - *death_direct
+    - *death_direct
+    - *death_direct
+    - &death_cued >-
+      Cued recall route. First recall the person's occupation, era, and year
+      and cause of death as retrieval cues, then determine the city where
+      they died.
+    - *death_cued
+    - *death_cued
+    - *death_cued
+    - *death_cued
+    - &death_timeline >-
+      Timeline route. Trace the person's final years — last residence, last
+      known activities, hospitalization if any — and conclude the city where
+      they died.
+    - *death_timeline
+    - *death_timeline
+    - *death_timeline
+    - *death_timeline
+    - &death_source >-
+      Source-style route. Recall how an obituary or encyclopedia entry
+      phrases this person's death ("died in ...") and report the city from
+      that remembered phrasing.
+    - *death_source
+    - *death_source
+    - *death_source
+    - *death_source
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

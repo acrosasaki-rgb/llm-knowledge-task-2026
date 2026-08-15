@@ -1,0 +1,69 @@
+name: magistral-small-24b-bf16-area-think
+model_id: unsloth/Magistral-Small-2509-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+# Magistral activates its [THINK] inner monologue via the system prompt; our
+# pipeline overrides the default system message, so the trigger must be
+# restored explicitly (first run produced zero thinking tokens).
+system_prefix: >-
+  First draft your thinking process (inner monologue) until you arrive at a
+  response. Format your response using Markdown, and use LaTeX for any
+  mathematical equations. Write both your thoughts and the response in the
+  same language as the input.
+  Your thinking process must follow the template below:[THINK]Your thoughts
+  or/and draft, like working through an exercise on scratch paper. Be as
+  casual and as long as you want until you are confident to generate the
+  response. Use the same language as the input.[/THINK]Here, provide a
+  self-contained response.
+# 12-row association screening (#38): Magistral Small 2509 (thinking sibling; tests whether thinking adds anything when associations are already healthy).
+relation_instructions:
+  hasArea: >-
+    The ground truth is the area value stored in Wikidata (property P2046,
+    the same value shown in the Wikipedia infobox) for the entity with
+    exactly this name. Recall that stored value in its original unit.
+    Convert it to square kilometers only if that unit is not already square
+    kilometers (1 hectare = 0.01 km2; 1,000,000 m2 = 1 km2;
+    1 square mile = 2.589988 km2; 1 acre = 0.004047 km2). Return only the
+    numeric value in square kilometers.
+candidate_instructions:
+  hasArea:
+    - &think_reminder >-
+      First write your reasoning between [THINK] and [/THINK], then output
+      only the JSON array.
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+    - *think_reminder
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05

@@ -1,0 +1,14 @@
+name: qwen3.5-9b
+model_id: Qwen/Qwen3.5-9B
+backend: multimodal
+parameter_count_billion: 9
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 64
+enable_thinking: false
+torch_dtype: auto
+device_map: auto
+generation:
+  do_sample: false

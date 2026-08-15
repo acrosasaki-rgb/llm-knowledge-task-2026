@@ -1,0 +1,6 @@
+{
+  "comment": "hasArea rows for the think-content sample, stratified by the BF16 20-candidate validation pool: near-all-correct (reference), selection-failure (correct present but aggregation lost), pool-miss (no correct candidate among 20).",
+  "near_all_correct": ["Ilha da Queimada Grande", "Estonia"],
+  "selection_failure": ["Hashima Island", "Maui", "Lake Texcoco", "Yell", "Lake Biel"],
+  "pool_miss": ["Hopen", "Leros", "Corfu", "Vygozero", "Okinotorishima"]
+}

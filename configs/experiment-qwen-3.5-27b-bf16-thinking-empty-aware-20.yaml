@@ -1,0 +1,46 @@
+name: qwen3.5-27b-bf16-thinking-empty-aware-20-2048-plus-128
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+# llama.cpp enforces a 2,048-token reasoning budget inside this total request
+# budget, leaving up to 128 tokens for the final JSON array.
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+# Aggregation is kept literally identical to the 5-candidate 0.5662
+# configuration on purpose: only num_candidates changes. Note that
+# empty_majority is an absolute vote count, so 3-of-20 is a much looser
+# empty-election rule than 3-of-5; alternative aggregations can be re-scored
+# from the retained candidates with akbc_baseline.reaggregate at no GPU cost.
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.2
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: median
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

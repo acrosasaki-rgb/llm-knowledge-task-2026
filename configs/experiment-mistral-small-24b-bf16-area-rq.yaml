@@ -1,0 +1,85 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  hasArea: 'Answer area questions by quoting your memory, never by estimating.
+
+    The reference value is the area stored in Wikidata (property P2046), the same
+    figure shown in the Wikipedia infobox for the entity with exactly this name.
+
+
+    Before giving the number, write exactly three short sentences:
+
+    1. Say what the entity is and where it is, so you do not confuse it with its parent
+    country or a similarly named place.
+
+    2. Quote the stored figure from memory in the form "From memory, the infobox area
+    of X is Y." Quote it exactly as stored, keeping every decimal digit; small areas
+    especially must keep their decimal point in the right place (0.43 is not 4.3).
+
+    3. Confirm the figure is in square kilometers, converting only if the stored unit
+    differs (1 hectare = 0.01 km2; 1 sq mi = 2.589988 km2).
+
+    Then output only a JSON array with the number as one string, no units, no commas.
+
+
+    Q: What is the area of Luxembourg in square kilometers?
+
+    Luxembourg is a sovereign country in Western Europe, not to be confused with the
+    Belgian province of the same name.
+
+    From memory, the infobox area of Luxembourg is 2586.4 km2.
+
+    2586.4 is already in square kilometers, and I keep the decimal digit as stored.
+
+    ["2586.4"]
+
+
+    Q: What is the area of Skye in square kilometers?
+
+    Skye is an island of the Inner Hebrides in Scotland, distinct from the wider Highland
+    council area.
+
+    From memory, the infobox area of Skye is 1656 km2.
+
+    1656 is already in square kilometers.
+
+    ["1656"]'
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

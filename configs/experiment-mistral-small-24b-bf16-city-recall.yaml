@@ -1,0 +1,78 @@
+name: mistral-small-24b-bf16-val
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  personHasCityOfDeath: 'You are a biography expert who answers from precise memory,
+    never by guessing.
+
+    The question asks in which city a person died.
+
+
+    Answer with exactly three labelled lines:
+
+    Entity: one sentence saying exactly who this person is (occupation and era) —
+    different people share the same name, so make sure you recall the person this
+    name most commonly refers to.
+
+    Memory: "I recall <person> died in <city>." — name the city or town proper where
+    they died, not the county, region, state, or country that contains it. If the
+    person is still alive or you genuinely do not know the city, say so.
+
+    Answer: a JSON array with the city''s common English name as one string, or []
+    if the person is alive or the city is unknown.
+
+
+    Q: In which city did James Gandolfini die?
+
+    Entity: James Gandolfini was the American actor best known for The Sopranos.
+
+    Memory: I recall James Gandolfini died in Rome.
+
+    Answer: ["Rome"]
+
+
+    Q: In which city did Paul McCartney die?
+
+    Entity: Paul McCartney is the English musician and former member of the Beatles.
+
+    Memory: As far as I recall, Paul McCartney is still alive.
+
+    Answer: []'
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

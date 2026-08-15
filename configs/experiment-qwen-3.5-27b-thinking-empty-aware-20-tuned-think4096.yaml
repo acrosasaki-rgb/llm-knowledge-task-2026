@@ -1,0 +1,46 @@
+# Extended-thinking variant of the tuned 20-candidate configuration
+# (Issue #26): the reasoning budget doubles to 4,096 tokens with the
+# same 128-token answer reserve. 56 percent of baseline candidates hit
+# the 2,048 budget; the within-row decomposition predicts little direct
+# accuracy gain, but a longer budget makes the natural/forced split a
+# cleaner confidence signal for forced_weight aggregation.
+name: qwen3.5-27b-thinking-empty-aware-20-tuned-think4096-4096-plus-128
+model_id: unsloth/Qwen3.5-27B-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 27
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 5
+seed: 42
+max_new_tokens: 4224
+num_candidates: 20
+enable_thinking: true
+llama_cpp_url: http://127.0.0.1:8080
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

@@ -1,0 +1,63 @@
+name: mistral-small-24b-bf16-cap-reap
+model_id: unsloth/Mistral-Small-3.2-24B-Instruct-2506-GGUF
+backend: llama_cpp_server
+parameter_count_billion: 24
+prompt_templates_file: prompt_templates/question_prompts.csv
+train_data_file: data/train.jsonl
+few_shot: 0
+seed: 42
+max_new_tokens: 2176
+num_candidates: 20
+enable_thinking: null
+llama_cpp_url: http://127.0.0.1:8080
+save_raw_text: true
+relation_instructions:
+  hasCapacity: "You are a sports-venue and events expert.\nWhen asked for the maximum spectator capacity\
+    \ of a venue, reason step by step:\n\nSTEP 1 - IDENTIFY VENUE: Identify venue type (stadium, arena,\
+    \ hall, field) and location.\nSTEP 2 - DISAMBIGUATION CHECK: Check if the venue is a minor or college\
+    \ venue that shares a name or city with a much larger venue. Keep Step 2 text-only.\nSTEP 3 - RECALL\
+    \ EXACT CAPACITY: Recall the exact official permanent seating capacity figure published in official\
+    \ sports databases for this venue.\n   - For minor/college venues, seating capacity is typically in\
+    \ the 1,000 to 35,000 range.\n   - For major national stadiums, it is in the 35,000 to 100,000 range.\n\
+    \   - Do not inflate permanent seating capacity with concert standing room.\nSTEP 4 - OUTPUT a single\
+    \ integer X, no units, no commas.\n\nExample 1 (Small campus stadium):\nQ: What is the capacity of\
+    \ Concordia Stadium in Montreal?\nStep 1: Concordia Stadium is a small university stadium in Montreal,\
+    \ Quebec, Canada.\nStep 2: Disambiguation - Distinct from the larger Olympic Stadium in Montreal.\n\
+    Step 3: I recall the maximum spectator capacity of Concordia Stadium is 4000.\nStep 4: Output 4000.\n\
+    FINAL_ANSWER: [\"4000\"]\n\nExample 2 (Minor regional venue):\nQ: What is the capacity of Estadio\
+    \ Revolución Ciudad de Guatemala in Guatemala City?\nStep 1: Estadio Revolución Ciudad de Guatemala\
+    \ is a football stadium in Guatemala City.\nStep 2: Disambiguation - Distinct from larger venues in\
+    \ Guatemala City.\nStep 3: I recall the maximum spectator capacity of Estadio Revolución Ciudad de\
+    \ Guatemala is 5000.\nStep 4: Output 5000.\nFINAL_ANSWER: [\"5000\"]\n\nIMPORTANT OUTPUT RULES:\n\
+    - At the very end of your response, write a line that starts with FINAL_ANSWER:\n- For list answers\
+    \  : FINAL_ANSWER: [\"value1\", \"value2\", ...]\n- For single value  : FINAL_ANSWER: [\"value\"]\n\
+    - For no answer     : FINAL_ANSWER: []\n- Use English names only. Do NOT include explanations after\
+    \ FINAL_ANSWER.\n\nQ: What is the total capacity of {{subject}}?\nReasoning:\nStep 1:"
+generation:
+  do_sample: true
+  temperature: 0.6
+  top_p: 0.95
+aggregation:
+  awardWonBy:
+    strategy: frequency
+    threshold: 0.05
+  companyTradesAtStockExchange:
+    strategy: frequency
+    threshold: 0.6
+    empty_aware: true
+    empty_majority: 10
+  countryLandBordersCountry:
+    strategy: frequency
+    threshold: 0.4
+    empty_aware: true
+    empty_majority: 3
+  hasArea:
+    strategy: unit_equivalence
+    cluster_tolerance: 0.05
+    unit_tolerance: 0.05
+  hasCapacity:
+    strategy: dominant_cluster
+    cluster_tolerance: 0.05
+  personHasCityOfDeath:
+    strategy: majority
+    explicit_empty_only: true

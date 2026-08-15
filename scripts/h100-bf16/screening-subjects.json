@@ -1,0 +1,4 @@
+{
+  "comment": "12-row broken-association probe (#38): rows where Qwen3.5's label-value association is broken or churned in Qwen3.6/Gemma. Metric: rows fixed (any-correct / mode-correct) per candidate model.",
+  "subjects": ["Basque Country", "Corfu", "Hopen", "Okinotorishima", "Hashima Island", "Itsukushima", "Lake Biel", "Borðoy", "Vygozero", "Lake Zaysan", "Mafia Island", "South Uist"]
+}
