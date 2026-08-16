@@ -45,7 +45,7 @@ predecessor---two deliberately different prompts over Mistral Small 3.2
 of the paper presents a mechanism study over three backbones and roughly
 forty controlled experiments, organized around three results. First, how
 reliably a backbone recalls the value stored for an entity label
-dominated every intervention we tried: each backbone change moved the
+mattered more than every intervention we tried: each backbone change moved the
 score more than all our prompt, sampling, and selection experiments
 combined, and the winner is a pretrained checkpoint: its
 instruction-tuned sibling, queried in the same registers so that only the
@@ -59,7 +59,7 @@ a register that writes a one-line biography before naming a city lets the
 model decline rows it cannot answer, raising that relation from 0.55 to
 0.61 on validation and reproducing on train and across seeds. Third,
 validation gains transferred to the hidden test set when the change was
-gated, when the gate consulted information from outside the model, and
+gated, when the gate used information from outside the model, and
 when the gain was stable across sampling seeds; each criterion has a
 counterexample that cost us test rows.
 \end{abstract}
@@ -73,7 +73,7 @@ object values---possibly none, one, or hundreds---under closed-book
 conditions: no retrieval, no external corpora, no fine-tuning, and at most
 32B neural parameters at inference.
 
-Under these conditions the only controls are at inference time: model
+Under these conditions everything we can change happens at inference time: model
 choice, prompts, sampling, and aggregation over samples. Our development
 proceeded in three stages: a Qwen3.5-27B thinking system (test 0.571), a
 Mistral Small 3.2 system with a second prompt and a cross-family 8B
@@ -81,9 +81,9 @@ arbiter (0.6247), and a single pretrained-only Gemma-3-27B backbone in
 completion registers (0.6670). Alongside the system we report the
 controlled experiments behind each decision. Those experiments are
 measured on validation and, where a threshold had to be chosen, on the
-training split; the hidden test set enters only as the outcome of
-submissions, which lets us ask separately which validation gains
-survived it.
+training split; the hidden test set appears only as the result of
+submissions, so we can ask separately which validation gains held up
+on it.
 
 \begin{enumerate}
   \item \textbf{Backbone recall reliability dominates.} A 12-row probe
@@ -133,7 +133,7 @@ queried in a \emph{raw text-completion register}---a record- or
 infobox-style prefix that the model continues, with no chat template and
 no instruction turn---with 20 candidates per query at temperature 0.6,
 top-$p$ 0.95 and deterministic per-candidate seeds, as in the earlier
-systems. Two registers depart from a bare record. \texttt{hasArea} and
+systems. Two registers are not plain records. \texttt{hasArea} and
 \texttt{hasCapacity} carry four fixed exemplars drawn from the
 \emph{training} split rather than written by us
 (Sec.~\ref{sec:exemplar}); \texttt{personHasCityOfDeath} writes a
@@ -214,7 +214,7 @@ v19: + biography register & \textbf{0.667} \\
 \end{tabular}
 \caption{Official test scores of our submissions (row-averaged Macro F1,
 three decimals). Each row is its predecessor plus the named change, so
-the column doubles as a sequence of isolated ablations on the hidden set
+the column also gives a series of isolated ablations on the hidden set
 (Sec.~\ref{sec:transfer}). Validation scores are not comparable across
 the whole table---the August release re-keyed the gold---so they are
 reported per experiment in Sec.~\ref{sec:anatomy} instead. The official
@@ -296,7 +296,7 @@ system built on it took test $0.625\rightarrow0.649$. It also supplies
 values no prompt reached on Mistral: secondary stock listings that five
 Mistral prompt variants returned with zero votes (\v{C}EZ on Warsaw,
 Questerre on Oslo, Aisin on Nagoya) appear with 7--13 votes out of 20.
-This was the dominant empirical factor in our experiments: closed-book
+This mattered more than anything else we varied: closed-book
 quality is set by which label-to-value pairings pretraining left intact
 and by whether the prompting format can reach them.
 
@@ -341,13 +341,13 @@ it by $+6$ / $-30$.}
 \label{tab:grid}
 \end{table}
 
-The single largest prompt effect we found---\texttt{hasArea} mode
+The largest prompt effect we found---\texttt{hasArea} mode
 $72\rightarrow78$, transferring to test as $0.70\rightarrow0.75$---looked
 at first like an instruction effect: a step-structured expert prompt,
 adapted from a style published by another participant, beat our grounding
 instruction by 6 rows. The $2{\times}2$ comparison
-(Table~\ref{tab:grid}) shows the instruction text is nearly inert. What
-matters is the \emph{exemplars}: with two in-prompt
+(Table~\ref{tab:grid}) shows the instruction text does almost nothing.
+What matters is the \emph{exemplars}: with two in-prompt
 exemplars demonstrating a one-sentence verbalized recall (``I recall that
 the Wikipedia infobox lists Luxembourg's total area as 2586.4\,km$^2$''),
 99\% of candidates reproduce the verbalization and the mode moves $+6$;
@@ -357,7 +357,7 @@ mode does not move. Iterating the wording (persona, fixed phrase,
 provenance vocabulary) changed nothing, while reproducing the labeled
 structure with our own labels recovered the full effect.
 
-The final system carries this one step further. Replacing our
+The final system pushes this further. Replacing our
 hand-written exemplars with four answers taken verbatim from the
 \emph{training} split---same register, same generation, same
 aggregation, only the examples change---moves validation from 0.665 to
@@ -378,8 +378,8 @@ usable signal was one-sided. A digit-check step inside an otherwise inert
 step-by-step procedure likewise cut votes for order-of-magnitude twin
 values from 38 to 32 with the oracle unchanged.
 
-The clearest case is \texttt{personHasCityOfDeath}, the one relation
-whose answer may legitimately be empty. Asking the register to write a
+The clearest case is \texttt{personHasCityOfDeath}, the only relation
+where an empty answer can be right. Asking the register to write a
 one-line biography before the answer field---\texttt{About:} then
 \texttt{City of death:}---raises it from 0.55 to 0.61 on validation
 against the same aggregation, reproduces on the training split
@@ -391,9 +391,9 @@ applied to \texttt{hasArea}, \texttt{hasCapacity} and
 \texttt{companyTradesAtStockExchange} changes nothing
 ($0\ldots-2$)---those relations do not ask whether to answer at all.
 
-Style, however, only moves where the model operates, not how well it
-separates. Compared at matched numbers of filled rows, the biography
-register dominates every other register we wrote (at 61 fills, 34 correct
+Style, though, changes how often the model answers, not which rows
+it gets right. Compared at matched numbers of filled rows, the biography
+register beats every other register we wrote (at 61 fills, 34 correct
 against 31), while styles that bias toward ``alive'' abstain more but
 discard correct answers at the same rate as wrong ones. Fifteen further
 gates for this relation, from obituary-style vetoes to
@@ -406,7 +406,7 @@ rows.
 Verbalized recall is a \emph{focusing} intervention: it sharpens the
 anchor distribution around the most frequently recalled value (oracle
 $89\rightarrow84$ as the mode improves), so its sign follows how reliable
-recall already is, in mirror image to thinking. Thinking explores,
+recall already is, the opposite way round from thinking. Thinking explores,
 gaining $+9$ rows where recall is unreliable (Qwen) and nothing where it
 is reliable (Mistral); verbalized recall does the opposite, zero or
 negative on Qwen and on Mistral's weakest relation (\texttt{hasCapacity}
@@ -471,7 +471,7 @@ the presence of a mechanism-level rationale (the rescoring has one).}
 Our submissions give per-component test measurements
 (Table~\ref{tab:transfer}). The components that transferred share two
 properties: each is \emph{gated}, touching only rows that meet an
-explicit condition, and each gate consults information from outside the
+explicit condition, and each gate uses information from outside the
 model---an unrelated-family vote, or the gold alias structure that makes
 two surface forms one count. The exemplar effect is the apparent
 exception: it changes what the backbone retrieves rather than
@@ -572,7 +572,7 @@ reliability, together with a prompting format that can reach it,
 outweighed every prompt-level intervention we tested, and that a
 half-hour probe ranked candidates well enough to act on.
 
-Two rules earned their place. Choose exemplars, not instructions, to
+Two rules held up. Choose exemplars, not instructions, to
 change what a model retrieves; instruction text in our experiments moved
 only the rejection of already-generated candidates. And before deploying
 what a small validation set endorses, ask whether the component is gated
@@ -589,8 +589,8 @@ register results. The final backbone is the least ablated configuration
 here: its per-component contributions are not separated on test. The
 12-row probe is stratified on one system's failures and its ranking is
 validated on the decisions we took, not a held-out model set. Counts on
-100-row relations carry $\pm1$--$2$ row noise, which bounds several
-negative results. The instruct-versus-pretrained control of
+100-row relations carry $\pm1$--$2$ row noise, which limits what several
+negative results can show. The instruct-versus-pretrained control of
 Sec.~\ref{sec:associations} holds the register fixed, but our earlier
 Mistral and Llama comparisons do not, and the account of residual errors
 is observational. Thresholds are tuned on validation or train, and the
