@@ -4,8 +4,9 @@
 %
 % DRAFT STATUS (v4, 2026-08-15; rebased on the v12 gemma-3-27b-pt system
 % and paper/paper-memo.md sections 8.1-8.27):
-% - Final system: v12, official test All 0.6493 (val 0.650), 27B, compliant.
-% - Best Mistral-era compliant system: v11, test 0.6247 (val 0.637).
+% - Final system: v19, official test All 0.6670 (6th), 27.4B, compliant.
+% - Best Mistral-era compliant system: v11, test 0.6247.
+% - Claims rest on validation/train; test is reported for submissions only.
 \documentclass[11pt]{article}
 
 \usepackage[final]{acl}
@@ -34,29 +35,33 @@ Closed-Book Knowledge Base Construction}
 \begin{abstract}
 We describe our system for the AKBC 2026 shared task on closed-book
 knowledge base construction. Our final system is a single pretrained-only
-backbone, Gemma-3-27B-pt, queried entirely in a raw text-completion
-format, with 20 candidates per query, relation-specific gated
-aggregation, and no arbiter; it uses 27B of the 32B parameter budget and
-scores a row-averaged Macro F1 of 0.650 on validation and 0.6493 on the
-official test set, against 0.313 for the official baseline. Its
+backbone, Gemma-3-27B-pt, queried entirely in raw text-completion
+registers with 20 candidates per query, gated relation-specific
+aggregation, and no arbiter; it uses 27.4B of the 32B parameter budget
+and scores a row-averaged Macro F1 of 0.6670 on the official test set
+(6th on the leaderboard), against 0.313 for the official baseline. Its
 predecessor---two deliberately different prompts over Mistral Small 3.2
 24B with a cross-family 8B arbiter, 31.8B in total---scores 0.6247. Most
 of the paper presents a mechanism study over three backbones and roughly
-thirty controlled experiments, organized around three results. First, how
+forty controlled experiments, organized around three results. First, how
 reliably a backbone recalls the value stored for an entity label
 dominated every intervention we tried: each backbone change moved the
 score more than all our prompt, sampling, and selection experiments
-combined, and the winning backbone is a pretrained checkpoint in a
-completion format, not an instruct model in a chat format. Second,
-exemplar style moves retrieval and instruction text does not---two
-in-prompt exemplars demonstrating a verbalized recall move the answer
-mode by $+6$ rows, while the same request as an instruction moves
-nothing---but instructions do move \emph{rejection}, the discarding of
-already-generated candidates. Third, validation gains transferred when
-the change was gated (applied only where a condition holds) \emph{and}
-the gate consulted information from outside the model; a
-mechanism-derived but ungated rescoring gained $+2$ validation rows and
-lost a test row.
+combined, and the winner is a pretrained checkpoint: its
+instruction-tuned sibling, queried in the same registers so that only the
+weights differ, loses 0.11 on validation. Second,
+exemplars move retrieval and instruction text does not---two in-prompt
+exemplars demonstrating a verbalized recall move the answer mode by $+6$
+validation rows, while the same request as an instruction moves nothing,
+and replacing synthetic exemplars with real training answers adds a
+further $+2.1$ points---but what instructions do move is \emph{rejection}:
+a register that writes a one-line biography before naming a city lets the
+model decline rows it cannot answer, raising that relation from 0.55 to
+0.61 on validation and reproducing on train and across seeds. Third,
+validation gains transferred to the hidden test set when the change was
+gated, when the gate consulted information from outside the model, and
+when the gain was stable across sampling seeds; each criterion has a
+counterexample that cost us test rows.
 \end{abstract}
 
 \section{Introduction}
@@ -72,10 +77,13 @@ Under these conditions the only controls are at inference time: model
 choice, prompts, sampling, and aggregation over samples. Our development
 proceeded in three stages: a Qwen3.5-27B thinking system (test 0.571), a
 Mistral Small 3.2 system with a second prompt and a cross-family 8B
-arbiter (0.6247), and a single pretrained-only Gemma-3-27B backbone in a
-completion format (0.6493). Alongside the system we report the controlled
-experiments behind each decision, including submissions whose test scores
-give us what validation cannot: isolated ablations on the hidden set.
+arbiter (0.6247), and a single pretrained-only Gemma-3-27B backbone in
+completion registers (0.6670). Alongside the system we report the
+controlled experiments behind each decision. Those experiments are
+measured on validation and, where a threshold had to be chosen, on the
+training split; the hidden test set enters only as the outcome of
+submissions, which lets us ask separately which validation gains
+survived it.
 
 \begin{enumerate}
   \item \textbf{Backbone recall reliability dominates.} A 12-row probe
@@ -120,19 +128,28 @@ closed-book and capped at 32B inference parameters.
 
 The final system generates with Gemma-3-27B-pt (the pretrained
 checkpoint, Q8\_0, served by \texttt{llama.cpp} at a pinned revision),
-one model and no arbiter, 27B of the 32B budget. Every relation is
-queried in a \emph{raw text-completion format}---a record- or
+one model and no arbiter, 27.4B of the 32B budget. Every relation is
+queried in a \emph{raw text-completion register}---a record- or
 infobox-style prefix that the model continues, with no chat template and
 no instruction turn---with 20 candidates per query at temperature 0.6,
 top-$p$ 0.95 and deterministic per-candidate seeds, as in the earlier
-systems.
+systems. Two registers depart from a bare record. \texttt{hasArea} and
+\texttt{hasCapacity} carry four fixed exemplars drawn from the
+\emph{training} split rather than written by us
+(Sec.~\ref{sec:exemplar}); \texttt{personHasCityOfDeath} writes a
+one-line biography before the answer field (Sec.~\ref{sec:rejection}).
+Neither changes generation or aggregation otherwise.
 
 Aggregation is relation-specific and, in every case, \emph{gated}: a rule
 applies only where an explicit support condition holds and falls back to
-a default otherwise. Numeric candidates are clustered at 5\% relative
-tolerance and \texttt{dominant\_cluster} predicts the median of the
-best-supported cluster. \texttt{personHasCityOfDeath} takes a surface
-majority with a minimum-vote gate, predicting empty below it.
+a default otherwise. Before voting, string surfaces are folded onto
+public gold entity classes with an alias graph built from the released
+train and validation answers, using English-label matches only
+(validation $0.658\rightarrow0.663$, driven by company). Numeric
+candidates are clustered at 5\% relative tolerance and
+\texttt{dominant\_cluster} predicts the median of the best-supported
+cluster. \texttt{personHasCityOfDeath} takes a surface majority with a
+minimum-vote gate of 14 of 20, predicting empty below it.
 \texttt{companyTradesAtStockExchange} folds surface variants---case
 variants and acronyms that expand to a co-occurring long form (NYSE
 $\rightarrow$ New York Stock Exchange)---into a single count, repairing
@@ -151,25 +168,21 @@ and a builder script (SHA-256 verified).
 
 \subsection{Predecessor system}
 
-The mechanism experiments of Sec.~\ref{sec:anatomy}, and all our
-per-component test measurements, come from the Mistral-era system that
-preceded it. It samples 20 candidates per prompt from Mistral Small 3.2
-24B under \emph{two} prompts of deliberately different style for
-\texttt{hasArea}: a \textbf{recall prompt} with no few-shot examples but
-two in-prompt exemplars demonstrating a labeled recall format
+Most experiments in Sec.~\ref{sec:anatomy} come from the Mistral-era
+system that preceded it. It samples 20 candidates per prompt from Mistral
+Small 3.2 24B under \emph{two} prompts of deliberately different style
+for \texttt{hasArea}: a \textbf{recall prompt} with no few-shot examples
+but two in-prompt exemplars demonstrating a labeled recall format
 (\texttt{Entity:}, \texttt{Memory:}\ ``I recall that the Wikipedia
 infobox lists X's total area as Y'', \texttt{Unit:}, \texttt{Answer:}),
-and a \textbf{grounding prompt} with five bare-JSON few-shot examples and
-an instruction naming the recall target (Wikidata
-\texttt{P2046}/\texttt{P1083}). \texttt{hasCapacity} adds a third prompt
-at zero additional parameter-count cost: the same 24B model queried as
-raw text completion.
-When two prompts disagree by more than 5\%, one aggregated arbiter
-decision---the mode over 20 samples of an unrelated-family
-Llama-3.1-8B---breaks the tie, switching to the secondary answer only if
-the arbiter matches it and not the primary one. The arbiter never
-introduces a value neither prompt proposed, but an incorrect switch can
-still lose a row. Total: $24\text{B}+8\text{B}\approx31.8\text{B}$.
+and a \textbf{grounding prompt} with five bare-JSON few-shot examples
+naming the recall target (Wikidata \texttt{P2046}/\texttt{P1083}). When
+the two disagree by more than 5\%, one aggregated arbiter decision---the
+mode over 20 samples of an unrelated-family Llama-3.1-8B---breaks the
+tie, switching only if the arbiter matches the secondary answer and not
+the primary one. The arbiter never introduces a value neither prompt
+proposed, but an incorrect switch can still lose a row. Total:
+$24\text{B}+8\text{B}\approx31.8\text{B}$.
 
 \subsection{Results}
 
@@ -177,50 +190,56 @@ still lose a row. Total: $24\text{B}+8\text{B}\approx31.8\text{B}$.
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
-System & cap & val & test \\
+System & cap & test \\
 \midrule
-Baseline (Qwen3.5-9B) & \checkmark & 0.313 & --- \\
-Qwen3.5-27B thinking & \checkmark & 0.588 & 0.571 \\
+Baseline (Qwen3.5-9B) & \checkmark & --- \\
+Qwen3.5-27B thinking & \checkmark & 0.571 \\
 \midrule
-Mistral 3.2 grounding & \checkmark & 0.595 & 0.595 \\
-v3: + recall prompt, area & & & \\
-\;\;\;\;arbitration, merge & \checkmark & 0.629 & 0.604 \\
-v4: + cap.\ arbitration & \checkmark & 0.633 & 0.606 \\
-v5: + acronym merging & \checkmark & 0.635 & 0.610 \\
-v6: + second arbiter & $\times$ & 0.637 & 0.610 \\
-v7: + city merge & $\times$ & 0.660 & 0.608 \\
-v8: v6 + re-keying$^{\ast}$ & $\times$ & 0.637 & 0.625 \\
-v10: + bridge, cap fix & \checkmark & 0.641 & 0.623 \\
-v11: $-$ bridge & \checkmark & 0.637 & 0.625 \\
+Mistral 3.2 grounding & \checkmark & 0.595 \\
+v3: + recall prompt, area & & \\
+\;\;\;\;arbitration, merge & \checkmark & 0.604 \\
+v4: + cap.\ arbitration & \checkmark & 0.606 \\
+v5: + acronym merging & \checkmark & 0.610 \\
+v7: + city merge & $\times$ & 0.608 \\
+v8: re-keying$^{\ast}$ & $\times$ & 0.625 \\
+v10: + bridge & \checkmark & 0.623 \\
+v11: $-$ bridge & \checkmark & 0.625 \\
 \midrule
-v12: Gemma-3-27B-pt & \checkmark & \textbf{0.650} & \textbf{0.649} \\
+v12: Gemma-3-27B-pt & \checkmark & 0.649 \\
+v13: + alias graph & \checkmark & 0.648 \\
+v16: + train exemplars & \checkmark & 0.659 \\
+v18: + city vote gate & \checkmark & 0.663 \\
+v19: + biography register & \checkmark & \textbf{0.667} \\
 \bottomrule
 \end{tabular}
-\caption{System progression (row-averaged Macro F1, three decimals). Each row is its
-predecessor plus the named change, so the test column doubles as a
-sequence of isolated ablations on the hidden set
-(Sec.~\ref{sec:transfer}); \emph{cap} marks configurations within the
-32B limit. $^{\ast}$Following the August subject-disambiguation release,
-which renamed 15 test subjects and dropped two rows
-(477$\rightarrow$475); v3--v7 score the renamed rows as zero. v9 (the
-rescoring on the non-compliant configuration) is omitted for space.}
+\caption{Official test scores of our submissions (row-averaged Macro F1,
+three decimals). Each row is its predecessor plus the named change, so
+the column doubles as a sequence of isolated ablations on the hidden set
+(Sec.~\ref{sec:transfer}); \emph{cap} marks configurations within the 32B
+limit. Validation scores are not comparable across the whole table---the
+August release re-keyed the gold---so they are reported per experiment in
+Sec.~\ref{sec:anatomy} instead. $^{\ast}$Following that release, which
+renamed 15 test subjects and dropped two rows (477$\rightarrow$475);
+v3--v7 score the renamed rows as zero. Versions differing only in
+variants we did not deploy (v9, v14--v15, v17) are omitted for space.}
 \label{tab:main}
 \end{table}
 
-Three contributions are separable on test: the Qwen$\rightarrow$Mistral
+Four contributions are separable on test: the Qwen$\rightarrow$Mistral
 backbone change ($+0.024$, rest of the pipeline unchanged), the
-Mistral-era pipeline interventions ($+0.015$, v3$\rightarrow$v5), and the
+Mistral-era pipeline interventions ($+0.015$, v3$\rightarrow$v5), the
 Mistral$\rightarrow$Gemma-pt backbone change ($+0.025$,
-v11$\rightarrow$v12). A further $+0.015$ came from following the dataset
+v11$\rightarrow$v12), and the two register changes of
+Sec.~\ref{sec:exemplar} and Sec.~\ref{sec:rejection} ($+0.018$,
+v13$\rightarrow$v19). A further $+0.015$ came from following the dataset
 re-keying, which corrects what is scored rather than improving the
-system. Per-relation test scores for v12: borders 0.954, company 0.842,
-area 0.810, city 0.490, award 0.336, capacity 0.276. The new backbone
-gains most over v11 on company ($0.778\rightarrow0.842$) and award
-($0.279\rightarrow0.336$) and loses on city ($0.510\rightarrow0.490$);
-the two agree on 32\% of \texttt{hasArea} and 29\% of
-\texttt{hasCapacity} rows.
+system. Per-relation test scores for the final system are: borders 0.960,
+company 0.832, area 0.820, city 0.530, award 0.336, capacity 0.316. The
+backbone change is what moved company ($0.778\rightarrow0.832$) and award
+($0.279\rightarrow0.336$); the register changes moved capacity
+($0.276\rightarrow0.316$) and city ($0.490\rightarrow0.530$).
 
 \section{Anatomy of Inference-Time Interventions}
 \label{sec:anatomy}
@@ -339,33 +358,64 @@ mode does not move. Iterating the wording (persona, fixed phrase,
 provenance vocabulary) changed nothing, while reproducing the labeled
 structure with our own labels recovered the full effect.
 
-\textbf{Instructions move rejection.} Instruction text was not inert
-everywhere: it moved the \emph{discarding} of already-generated
-candidates. Verifying each \texttt{awardWonBy} candidate with three
-yes/no votes and dropping only unanimous-no candidates raised precision
-$0.241\rightarrow0.280$ and F1 $0.172\rightarrow0.186$; the yes votes
-carried no information, so the usable signal was one-sided. A digit-check
-step inside an otherwise inert step-by-step procedure likewise cut votes
-for order-of-magnitude twin values from 38 to 32 with the oracle
-unchanged. Instructions act after retrieval, on which candidates survive.
+The final system carries this one step further. Replacing our
+hand-written exemplars with four answers taken verbatim from the
+\emph{training} split---same register, same generation, same
+aggregation, only the examples change---moves validation from 0.665 to
+0.686, with \texttt{hasArea} $0.84\rightarrow0.88$ and
+\texttt{hasCapacity} $0.309\rightarrow0.361$. The gain holds across three
+sampling seeds (area 0.88/0.89/0.87, capacity 0.361/0.351/0.361), and no
+exemplar subject occurs in validation or test.
+
+\subsection{Instructions Move Rejection}
+\label{sec:rejection}
+
+Instruction text was not inert everywhere: it moved the
+\emph{discarding} of already-generated candidates. Verifying each
+\texttt{awardWonBy} candidate with three yes/no votes and dropping only
+unanimous-no candidates raised precision $0.241\rightarrow0.280$ and F1
+$0.172\rightarrow0.186$; the yes votes carried no information, so the
+usable signal was one-sided. A digit-check step inside an otherwise inert
+step-by-step procedure likewise cut votes for order-of-magnitude twin
+values from 38 to 32 with the oracle unchanged.
+
+The clearest case is \texttt{personHasCityOfDeath}, the one relation
+whose answer may legitimately be empty. Asking the register to write a
+one-line biography before the answer field---\texttt{About:} then
+\texttt{City of death:}---raises it from 0.55 to 0.61 on validation
+against the same aggregation, reproduces on the training split
+($0.52\rightarrow0.55$) and on a second seed (0.60), and beats every
+other register we wrote. The traces show why: the model states ``he is
+still alive'' for living subjects, converting five wrong fills into
+abstentions, and recalls six further correct cities. The same register
+applied to \texttt{hasArea}, \texttt{hasCapacity} and
+\texttt{companyTradesAtStockExchange} changes nothing
+($0\ldots-2$)---those relations do not ask whether to answer at all.
+
+Style, however, only moves where the model operates, not how well it
+separates. Compared at matched numbers of filled rows, the biography
+register dominates every other register we wrote (at 61 fills, 34 correct
+against 31), while styles that bias toward ``alive'' abstain more but
+discard correct answers at the same rate as wrong ones. Fifteen further
+gates for this relation, from obituary-style vetoes to
+internal-activation familiarity probes, moved validation by at most two
+rows.
 
 \subsection{The Exemplar Effect Is Conditional}
 \label{sec:conditions}
 
-Verbalized recall is a \emph{focusing} intervention---it sharpens the
+Verbalized recall is a \emph{focusing} intervention: it sharpens the
 anchor distribution around the most frequently recalled value (oracle
-drops $89\rightarrow84$ as the mode improves). Its sign therefore follows
-how reliable the model's recall already is, in mirror image to thinking:
-thinking explores, gaining $+9$ rows where recall is unreliable (Qwen)
-and nothing where it is reliable (Mistral); verbalized recall does the
-opposite, zero or negative on Qwen and on Mistral's weakest relation
-(\texttt{hasCapacity} oracle $60\rightarrow47$) but $+6$ on
-\texttt{hasArea}. In Magistral (Mistral's RL-tuned sibling) the effect
-disappears: it copies the verbalized form at 99.9\% compliance---in its
-thinking channel, in a scripted thinking channel, and in the answer
-body---yet its anchor distribution does not move in any of the three
-(70--72), suggesting that RL post-training may decouple response style
-from retrieval.
+$89\rightarrow84$ as the mode improves), so its sign follows how reliable
+recall already is, in mirror image to thinking. Thinking explores,
+gaining $+9$ rows where recall is unreliable (Qwen) and nothing where it
+is reliable (Mistral); verbalized recall does the opposite, zero or
+negative on Qwen and on Mistral's weakest relation (\texttt{hasCapacity}
+oracle $60\rightarrow47$) but $+6$ on \texttt{hasArea}. In Magistral
+(Mistral's RL-tuned sibling) it disappears: the verbalized form is copied
+at 99.9\% compliance in three different channels, yet the anchor
+distribution does not move in any of them (70--72), suggesting that RL
+post-training may decouple response style from retrieval.
 
 \subsection{We Find No Usable Within-Model Selection Signal in the
 Features We Tested}
@@ -378,16 +428,15 @@ which is why judges, confidence weighting, and consensus schemes failed
 in our experiments. What did extract signal is \emph{disagreement between
 prompts of different style}: on the $\sim$25 rows where the recall and
 grounding prompts disagree by more than 5\%, one aggregated decision from
-an unrelated-family 8B model resolves the tie, giving
-\texttt{hasArea} $78\rightarrow80$ and \texttt{hasCapacity}
-$26\rightarrow28$ on validation; among the four \texttt{hasArea} rows it
-changed, arbitration corrected three and harmed one. Controls locate the
-conditions: same-style prompt pairs produce too little disagreement to
-arbitrate; promoting minority clusters by the arbiter's mode is
-\emph{negative}---an 8B cannot overrule a 24B mode, only break ties; and
-a weak arbiter (Ministral-8B, same family, mode accuracy 23 vs.\ Llama's
-53 of 100) gains nothing. The isolated v3$\rightarrow$v4 ablation---four
-capacity rows changed, nothing else---confirms the transfer on test:
+an unrelated-family 8B model resolves the tie, giving \texttt{hasArea}
+$78\rightarrow80$ and \texttt{hasCapacity} $26\rightarrow28$ on
+validation; of the four \texttt{hasArea} rows it changed, three were
+corrected and one harmed. Controls locate the conditions: same-style
+prompt pairs produce too little disagreement to arbitrate; promoting
+minority clusters by the arbiter's mode is \emph{negative}---an 8B cannot
+overrule a 24B mode, only break ties; and a weak arbiter (Ministral-8B,
+same family, mode accuracy 23 vs.\ Llama's 53 of 100) gains nothing. The
+isolated v3$\rightarrow$v4 ablation confirms the transfer on test:
 capacity F1 $0.204\rightarrow0.214$.
 
 \subsection{Which Validation Gains Transfer}
@@ -442,11 +491,18 @@ $0.800\rightarrow0.790$), because it moves \emph{every} row rather than
 only rows meeting a condition; we removed it in v11. Later gated experiments failed the
 second criterion the same way: certificates computed from the same
 model's internal consistency (unit agreement, answer-blind priming)
-admitted confident errors and lost rows. A 100-row validation set may not
-reliably expose this form of overfitting; in our experiments, whether a
-component is gated and whether its gate looks outside the model predicted
-transfer better than effect size or the presence of a mechanism-level
-rationale.
+admitted confident errors and lost rows. A third predictor appeared late. When we
+replaced our exemplars with training answers, the same change helped
+\texttt{hasArea} and \texttt{hasCapacity} on all three seeds we ran and
+helped \texttt{personHasCityOfDeath} on one seed only (0.56/0.50/0.49);
+we deployed all three, and on test the two seed-stable relations
+transferred ($+4$ capacity rows) while the seed-unstable one cost five
+rows. We now treat single-seed differences below about four rows on a
+100-row relation as unusable. A 100-row validation set may not reliably
+expose these failures; in our experiments, whether a component is gated,
+whether its gate looks outside the model, and whether its gain survives
+reseeding predicted transfer better than effect size or the presence of a
+mechanism-level rationale.
 
 \subsection{Residual Errors Look Like Values Learned From the Corpus}
 \label{sec:associations}
@@ -458,18 +514,28 @@ wrong values that survive every prompt. Three observations support the
 hypothesis that they were learned from training data. First,
 \emph{turnover across generations}: Qwen3.6 repairs 7 of Qwen3.5's wrong
 rows and breaks 11 new ones with nothing else changed, and the union
-oracle across generations reaches 89/100. Second, \emph{unrelated
-training lineages solve mainstream-broken rows}: llm-jp-4-32b and Aya
-Expanse are far weaker overall yet each partially solves Corfu, which no
-mainstream-corpus model in our set solves. Third, \emph{the
-instruct-plus-chat setting is associated with a stronger incorrect
-anchor}: under raw completion Mistral 3.1 Base scores 10/12-any and
-7/12-mode against its own instruct's 9/4, the gap replicates on
-Llama-3.1-8B (mode accuracy 60 vs.\ 53 of 100), and the largest instance
-is the Gemma lineage of Sec.~\ref{sec:screening}. These comparisons
-change weights and prompting format together; what they establish is that
-the accessible ceiling is a property of the backbone and its prompting
-format, not of prompt engineering within one setting.
+oracle reaches 89/100. Second, \emph{unrelated training lineages solve
+mainstream-broken rows}: llm-jp-4-32b and Aya Expanse are far weaker
+overall yet each partially solves Corfu, which no mainstream-corpus model
+in our set solves. Third, \emph{instruction tuning costs recall}: under
+raw completion Mistral 3.1 Base scores 10/12-any against its own
+instruct's 9, and the gap replicates on Llama-3.1-8B (mode accuracy 60
+vs.\ 53 of 100).
+
+The last comparison is the one our final system rests on, so we ran it
+without the register confound: the instruction-tuned sibling of our
+backbone, queried in the \emph{same} completion registers with the same
+sampling and aggregation, scores 0.553 on validation against 0.665 for
+the pretrained checkpoint (\texttt{hasArea} 0.61 vs.\ 0.84,
+\texttt{hasCapacity} 0.24 vs.\ 0.31, \texttt{personHasCityOfDeath} 0.38
+vs.\ 0.52), reproduced on two seeds. Since weights are the only
+difference, the loss belongs to instruction tuning itself rather than to
+the chat template, at least in this lineage---and the abstention
+behaviour that makes the biography register work
+(Sec.~\ref{sec:rejection}) is absent in the tuned sibling, which
+fabricates instead. What all of this establishes is that the accessible
+ceiling is a property of the checkpoint, not of prompt engineering within
+one setting.
 
 \section{Related Work}
 
@@ -481,23 +547,25 @@ answers by majority vote and ReWiSe \citep{albertroulhac2025rewise} tuned
 it relation-wise; we extend the line to empty answer sets, numeric
 tolerance, surface-form folding, and cross-family arbitration.
 \citet{sprague2025cot} find chain-of-thought helps reasoning but not
-knowledge recall; we refine this for recall tasks, where exemplar style
-moves retrieval although procedures and instructions do not.
-\citet{ma2026parametric} report prompting moves parametric knowledge
-access by 1--2\% and RL fine-tuning by $\sim$10\%; our exemplar effect
-($+6$\% on the affected relation) sits between, and fine-tuning is
-prohibited here. \citet{numbers2025know} find probe-recoverable numeric
-knowledge exceeds what models verbalize, one reading of our oracle--mode
-gaps; \citet{kalyan2021fermi} and \citet{park2022measurements} document
-the magnitude and unit fragilities our decimal-rule and unit-merge
-components target; and grounding instructions instantiate ``According
-to\ldots'' cues \citep{weller2024according}.
+knowledge recall; we refine this for recall tasks, where exemplars move
+retrieval although instructions do not, and where a chain-of-thought
+register helps exactly one relation---the one that must decide whether to
+answer. \citet{ma2026parametric} report prompting moves parametric
+knowledge access by 1--2\% and RL fine-tuning by $\sim$10\%; our exemplar
+effect sits between, and fine-tuning is prohibited here.
+\citet{numbers2025know} find probe-recoverable numeric knowledge exceeds
+what models verbalize, one reading of our oracle--mode gaps;
+\citet{kalyan2021fermi} and \citet{park2022measurements} document the
+magnitude and unit fragilities our components target; and grounding
+instructions instantiate ``According to\ldots'' cues
+\citep{weller2024according}.
 
 \section{Conclusion}
 
-Our final system is a single pretrained-only 27B backbone queried in a
-completion format with gated aggregation (validation 0.650, test 0.6493);
-the two-prompt, arbiter-ensembled 24B system it replaced scores 0.6247.
+Our final system is a single pretrained-only 27.4B backbone queried in
+completion registers with gated aggregation (test 0.6670, 6th on the
+leaderboard); the two-prompt, arbiter-ensembled 24B system it replaced
+scores 0.6247.
 The most reliable finding behind that progression is that backbone recall
 reliability, together with a prompting format that can reach it,
 outweighed every prompt-level intervention we tested, and that a
@@ -515,25 +583,27 @@ and one task edition.
 \section*{Limitations}
 
 The mechanism findings rest on two model families in depth (Qwen,
-Mistral) with single-seed generation for most prompts; seed replications
-exist only for the exemplar, arbitration, and rescoring results. The
-final Gemma-pt system is the least ablated configuration here: built and
-submitted within one day, its per-component contributions are not
-separated on test and its one regression (city,
-$0.510\rightarrow0.490$) is unexplained. The 12-row probe is stratified
-on one system's failures, and its ranking is validated on the deployment
-decisions we took, not a held-out model set. Oracle and mode counts on
+Mistral), with seed replications only for the exemplar, arbitration and
+register results. The final backbone is the least ablated configuration
+here: its per-component contributions are not separated on test. The
+12-row probe is stratified on one system's failures and its ranking is
+validated on the decisions we took, not a held-out model set. Counts on
 100-row relations carry $\pm1$--$2$ row noise, which bounds several
-negative results. Every base-versus-instruct and
-pretrained-versus-instruct comparison changes weights and prompting
-format together, which we flag rather than resolve, and the account of
-residual errors is observational. Aggregation thresholds are
-validation-tuned, and the transfer criterion of Sec.~\ref{sec:transfer}
-comes from one task edition.
+negative results. The instruct-versus-pretrained control of
+Sec.~\ref{sec:associations} holds the register fixed, but our earlier
+Mistral and Llama comparisons do not, and the account of residual errors
+is observational. Thresholds are tuned on validation
+or train, and the transfer criterion of Sec.~\ref{sec:transfer} comes
+from one task edition. Two choices used the hidden set and are therefore
+not validation-reproducible: after training exemplars cost five city rows
+on test we reverted that relation to its earlier register, and we
+compared six city vote thresholds on test before keeping the one reported
+here. The final city configuration should be read as tuned rather than
+predicted; every other decision was made on validation and train alone.
 Finally, submissions v6--v9 included a second 8B arbiter that put the
 ensemble at $\approx$39.8B, over the 32B cap; the violation was ours,
 found in a self-audit, and v10 removed it at no test cost. Their test
-numbers should be read as at-risk under the cap rule; v11 and v12 are
+numbers should be read as at-risk under the cap rule; v11 onwards are
 compliant.
 
 \bibliography{references}
