@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gemma-pt full test-set generation: all six relations in one session, raw
+# Gemma-pt train-gold fixed 4-shot ICL registers (city/company/capacity/area): all six relations in one session, raw
 # completion registers, reading the row list from a mounted file so the new
 # 475-row disambiguated split can be used.
 set -Eeuo pipefail
@@ -53,49 +53,43 @@ SEED = os.environ.get("AKBC_SEED", "42")
 
 REGISTERS = {
     "hasArea": (
-        "The Wikipedia infobox lists the total area of Luxembourg as 2586.4 square kilometers.\n"
-        "The Wikipedia infobox lists the total area of Skye as 1656 square kilometers.\n"
+        "The Wikipedia infobox lists the total area of Andros, Greece as 381.398 square kilometers.\n"
+        "The Wikipedia infobox lists the total area of Eritrea as 117600 square kilometers.\n"
+        "The Wikipedia infobox lists the total area of Catanduanes as 1492.16 square kilometers.\n"
+        "The Wikipedia infobox lists the total area of Molokaʻi as 673.4 square kilometers.\n"
         "The Wikipedia infobox lists the total area of {s} as"
     ),
     "hasCapacity": (
-        "The Wikipedia infobox lists the seating capacity of Camp Nou as 99354.\n"
-        "The Wikipedia infobox lists the seating capacity of Mackay Stadium as 27000.\n"
+        "The Wikipedia infobox lists the seating capacity of HoHoKam Stadium in Arizona as 12623.\n"
+        "The Wikipedia infobox lists the seating capacity of Changwon Stadium in Changwon as 27085.\n"
+        "The Wikipedia infobox lists the seating capacity of Al-Jalaa Stadium in Damascus as 10000.\n"
+        "The Wikipedia infobox lists the seating capacity of Christy Mathewson–Memorial Stadium in Pennsylvania as 13100.\n"
         "The Wikipedia infobox lists the seating capacity of {s} as"
     ),
     "personHasCityOfDeath": (
-        "Name: James Gandolfini\nOccupation: actor\nCity of death: Rome\n"
-        "Name: Ada Lovelace\nOccupation: mathematician\nCity of death: London\n"
-        "Name: Paul McCartney\nOccupation: musician\nCity of death: (still alive)\n"
+        "Name: Pavel Šrut\nOccupation: poet\nCity of death: Prague\n"
+        "Name: George Akerlof\nOccupation: economist\nCity of death: NONE\n"
+        "Name: Edward Soja\nOccupation: geographer\nCity of death: Los Angeles\n"
+        "Name: Nobuyoshi Araki\nOccupation: photographer\nCity of death: NONE\n"
         "Name: {s}\nOccupation:"
     ),
-    "countryLandBordersCountry": (
-        "Country: Portugal\nLand borders: Spain\n"
-        "Country: Japan\nLand borders: none\n"
-        "Country: Austria\nLand borders: Germany; Czech Republic; Slovakia; "
-        "Hungary; Slovenia; Italy; Switzerland; Liechtenstein\n"
-        "Country: {s}\nLand borders:"
-    ),
     "companyTradesAtStockExchange": (
-        "Company: Sony Group Corporation\n"
-        "Exchanges: Tokyo Stock Exchange; New York Stock Exchange\n"
-        "Company: Robert Bosch GmbH\n"
-        "Exchanges: none (privately held)\n"
-        "Company: Nike, Inc.\n"
-        "Exchanges: New York Stock Exchange\n"
+        "Company: All Nippon Airways\n"
+        "Exchanges: Tokyo Stock Exchange; London Stock Exchange\n"
+        "Company: Knipex\n"
+        "Exchanges: none\n"
+        "Company: BNP Paribas\n"
+        "Exchanges: Euronext Paris\n"
+        "Company: Tama Home\n"
+        "Exchanges: Tokyo Stock Exchange; Fukuoka Stock Exchange\n"
         "Company: {s}\n"
         "Exchanges:"
-    ),
-    "awardWonBy": (
-        "Award: Hugo Award for Best Novel\n"
-        "Recipients: Isaac Asimov; Frank Herbert; Ursula K. Le Guin; "
-        "Arthur C. Clarke; Kim Stanley Robinson; N. K. Jemisin\n"
-        "Award: {s}\n"
-        "Recipients:"
     ),
 }
 NPRED = {"awardWonBy": 220}
 
 rows = [json.loads(line) for line in open(rows_path, encoding="utf-8")]
+rows = [r for r in rows if r["Relation"] in REGISTERS]
 print(len(rows), "rows", flush=True)
 
 def sample(prompt, seed, n_predict):
@@ -116,7 +110,7 @@ def parse(relation, text):
         m = re.search(r"[-+]?\d[\d,]*(?:\.\d+)?", text)
         return [m.group(0).replace(",", "")] if m else []
     if relation == "personHasCityOfDeath":
-        if "alive" in text.lower():
+        if "alive" in text.lower() or re.search(r"City of death:\s*NONE", text):
             return []
         m = re.search(r"City of death:\s*([^\n,.(]+)", text)
         if m:
@@ -152,10 +146,10 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
         if n % 50 == 0:
             print(f"{n}/475 rows", flush=True)
 
-path = f"{out_prefix}-test-all-candidates.jsonl"
+path = f"{out_prefix}-icl-candidates.jsonl"
 with open(path, "w", encoding="utf-8") as stream:
     for row in results:
         stream.write(json.dumps(row, ensure_ascii=False) + "\n")
 print(f"wrote {path}: {len(results)} rows")
-print("gemma test generation completed")
+print("gemma icl completed")
 PY

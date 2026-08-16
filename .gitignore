@@ -4,6 +4,9 @@
 .env
 .env.*
 !.env.example
+ssh/
+*.pem
+*.key
 
 __pycache__/
 *.egg-info/
