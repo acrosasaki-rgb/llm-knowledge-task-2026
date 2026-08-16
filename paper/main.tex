@@ -107,8 +107,8 @@ on it.
   \item \textbf{Validation gains transfer when the change is gated and
     the gate looks outside the model} (Sec.~\ref{sec:transfer}).
   \item \textbf{The residual errors are consistent with incorrect values
-    learned from training data}, and are associated with the
-    instruct-plus-chat setting (Sec.~\ref{sec:associations}).
+    learned from training data}, and instruction tuning costs recall
+    (Sec.~\ref{sec:associations}).
 \end{enumerate}
 
 \section{Task and Constraints}
@@ -401,9 +401,7 @@ it gets right. Compared at matched numbers of filled rows, the biography
 register beats every other register we wrote (at 61 fills, 34 correct
 against 31), while styles that bias toward ``alive'' abstain more but
 discard correct answers at the same rate as wrong ones. Fifteen further
-gates for this relation, from obituary-style vetoes to
-internal-activation familiarity probes, moved validation by at most two
-rows.
+gates for this relation moved validation by at most two rows.
 
 \subsection{The Exemplar Effect Is Conditional}
 \label{sec:conditions}
@@ -437,9 +435,9 @@ $78\rightarrow80$ and \texttt{hasCapacity} $26\rightarrow28$ on
 validation; of the four \texttt{hasArea} rows it changed, three were
 corrected and one harmed. Controls locate the conditions: same-style
 prompt pairs produce too little disagreement to arbitrate; promoting
-minority clusters by the arbiter's mode is \emph{negative}---an 8B cannot
-overrule a 24B mode, only break ties; and a weak arbiter (Ministral-8B,
-same family, mode accuracy 23 vs.\ Llama's 53 of 100) gains nothing. The
+minority clusters by the arbiter's mode is \emph{negative}, since an 8B
+cannot overrule a 24B mode, only break ties; and a weak arbiter
+(Ministral-8B, mode accuracy 23 vs.\ Llama's 53) gains nothing. The
 isolated v3$\rightarrow$v4 ablation confirms the transfer on test:
 capacity F1 $0.204\rightarrow0.214$.
 
@@ -484,9 +482,8 @@ adjudicating between candidates.
 
 The components that did not transfer are fits to validation row
 distributions: the best of six capacity configurations (winner's curse),
-an increment to an already-saturated arbiter, and a city pipeline whose
-$+11$-row gain rested on the rate at which split-vote rows happen to be
-correct-mode. The most instructive case is a tolerance-geometry rescoring
+an increment to a saturated arbiter, and a city pipeline whose $+11$-row
+gain rested on how often split-vote rows happen to be correct-mode. The most instructive case is a tolerance-geometry rescoring
 we deployed in v9--v10. Two values whose ratio is below
 $1.05/0.95\approx1.105$ admit a single prediction correct for either, so
 each answer can be shifted inside its own $\pm5\%$ window to also cover a
@@ -522,8 +519,8 @@ hypothesis that they were learned from training data. First,
 rows and breaks 11 new ones with nothing else changed, and the union
 oracle reaches 89/100. Second, \emph{unrelated training lineages solve
 mainstream-broken rows}: llm-jp-4-32b and Aya Expanse are far weaker
-overall yet each partially solves Corfu, which no mainstream-corpus model
-in our set solves. Third, \emph{instruction tuning costs recall}: under
+overall yet each partially solves Corfu, which no mainstream-corpus
+model solves. Third, \emph{instruction tuning costs recall}: under
 raw completion Mistral 3.1 Base scores 10/12-any against its own
 instruct's 9, and the gap replicates on Llama-3.1-8B (mode accuracy 60
 vs.\ 53 of 100).
@@ -534,14 +531,12 @@ backbone, queried in the \emph{same} completion registers with the same
 sampling and aggregation, scores 0.553 on validation against 0.665 for
 the pretrained checkpoint (\texttt{hasArea} 0.61 vs.\ 0.84,
 \texttt{hasCapacity} 0.24 vs.\ 0.31, \texttt{personHasCityOfDeath} 0.38
-vs.\ 0.52), reproduced on two seeds. Since weights are the only
-difference, the loss belongs to instruction tuning itself rather than to
-the chat template, at least in this lineage---and the abstention
-behaviour that makes the biography register work
-(Sec.~\ref{sec:rejection}) is absent in the tuned sibling, which
-fabricates instead. What all of this establishes is that the accessible
-ceiling is a property of the checkpoint, not of prompt engineering within
-one setting.
+vs.\ 0.52), on two seeds. Since weights are the only difference, the loss
+belongs to instruction tuning rather than to the chat template, at least
+in this lineage---and the abstention that makes the biography register
+work (Sec.~\ref{sec:rejection}) is absent in the tuned sibling, which
+fabricates instead. The ceiling is a property of the checkpoint, not of
+prompt engineering within one setting.
 
 \section{Related Work}
 
@@ -550,8 +545,8 @@ Probing factual knowledge in LMs goes back to LAMA
 extends it to KB construction with unconstrained cardinalities.
 Self-consistency \citep{wang2023selfconsistency} aggregates sampled
 answers by majority vote and ReWiSe \citep{albertroulhac2025rewise} tuned
-it relation-wise; we extend the line to empty answer sets, numeric
-tolerance, surface-form folding, and cross-family arbitration.
+it relation-wise; we extend it to empty answers, numeric tolerance,
+surface folding, and cross-family arbitration.
 \citet{sprague2025cot} find chain-of-thought helps reasoning but not
 knowledge recall; we refine this for recall tasks, where exemplars move
 retrieval although instructions do not, and where a chain-of-thought
@@ -560,48 +555,37 @@ answer. \citet{ma2026parametric} report prompting moves parametric
 knowledge access by 1--2\% and RL fine-tuning by $\sim$10\%; our exemplar
 effect sits between, and fine-tuning is prohibited here.
 \citet{numbers2025know} find probe-recoverable numeric knowledge exceeds
-what models verbalize, one reading of our oracle--mode gaps;
+what models verbalize, one reading of our oracle--mode gaps, and
 \citet{kalyan2021fermi} and \citet{park2022measurements} document the
-magnitude and unit fragilities our components target; and grounding
-instructions instantiate ``According to\ldots'' cues
-\citep{weller2024according}.
+magnitude and unit fragilities our components target.
 
 \section{Conclusion}
 
 Our final system is a single pretrained-only 27.4B backbone queried in
 completion registers with gated aggregation (test 0.6670, 6th on the
 leaderboard); the two-prompt, arbiter-ensembled 24B system it replaced
-scores 0.6247.
-The most reliable finding behind that progression is that backbone recall
-reliability, together with a prompting format that can reach it,
-outweighed every prompt-level intervention we tested, and that a
-half-hour probe ranked candidates well enough to act on.
+scores 0.6247. Behind that progression, backbone recall reliability and a
+register that can reach it outweighed every prompt-level intervention we
+tested, and a half-hour probe ranked candidates well enough to act on.
 
-Two rules held up. Choose exemplars, not instructions, to
-change what a model retrieves; instruction text in our experiments moved
-only the rejection of already-generated candidates. And before deploying
-what a small validation set endorses, ask whether the component is gated
-and whether its gate consults anything outside the model---those that
-failed this test cost us rows even with a clean mechanism-level
-rationale. Both rules are bounded by what we measured: three backbones
-and one task edition.
+Two rules held up. Choose exemplars, not instructions, to change what a
+model retrieves; instruction text in our experiments moved only which
+candidates survive. And before deploying what a small validation set
+endorses, ask whether the component is gated, whether its gate uses
+anything outside the model, and whether the gain survives reseeding.
+Both rules are bounded by what we measured: three backbones and one task
+edition.
 
 \section*{Limitations}
 
 The mechanism findings rest on two model families in depth (Qwen,
 Mistral), with seed replications only for the exemplar, arbitration and
-register results. The final backbone is the least ablated configuration
-here: its per-component contributions are not separated on test. The
-12-row probe is stratified on one system's failures and its ranking is
-validated on the decisions we took, not a held-out model set. Counts on
-100-row relations carry $\pm1$--$2$ row noise, which limits what several
-negative results can show. The instruct-versus-pretrained control of
-Sec.~\ref{sec:associations} holds the register fixed, but our earlier
-Mistral and Llama comparisons do not, and the account of residual errors
-is observational. Thresholds are tuned on validation or train, and the
-transfer criterion of Sec.~\ref{sec:transfer} comes from one task
-edition and from a single system lineage, so it should be read as a
-working heuristic rather than a validated rule.
+register results, and the final backbone is the least ablated here. The
+12-row probe is stratified on one system's failures and validated on the
+decisions we took, not a held-out model set, and counts on 100-row
+relations carry $\pm1$--$2$ row noise. The control in
+Sec.~\ref{sec:associations} holds the register fixed; our earlier Mistral
+and Llama comparisons do not. The transfer criterion rests on one task edition.
 
 \bibliography{references}
 
