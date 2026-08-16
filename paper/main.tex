@@ -50,14 +50,16 @@ score more than all our prompt, sampling, and selection experiments
 combined, and the winner is a pretrained checkpoint: its
 instruction-tuned sibling, queried in the same registers so that only the
 weights differ, loses 0.11 on validation. Second,
-exemplars move retrieval and instruction text does not---two in-prompt
-exemplars demonstrating a verbalized recall move the answer mode by $+6$
-validation rows, while the same request as an instruction moves nothing,
-and replacing synthetic exemplars with real training answers adds a
-further $+2.1$ points---but what instructions do move is \emph{rejection}:
-a register that writes a one-line biography before naming a city lets the
-model decline rows it cannot answer, raising that relation from 0.55 to
-0.61 on validation and reproducing on train and across seeds. Third,
+exemplars move \emph{retrieval}---which value the model produces from its
+weights---and instruction text does not: two in-prompt exemplars
+demonstrating a verbalized recall move the answer mode by $+6$ validation
+rows, while the same request as an instruction moves nothing, and
+replacing synthetic exemplars with real training answers adds a further
+$+2.1$ points. What instructions do move is \emph{rejection}, which
+already-produced candidates survive: a register that writes a one-line
+biography before naming a city lets the model decline rows it cannot
+answer, raising that relation from 0.55 to 0.61 on validation and
+reproducing on train and across seeds. Third,
 validation gains transferred to the hidden test set when the change was
 gated, when the gate used information from outside the model, and
 when the gain was stable across sampling seeds; each criterion has a
@@ -70,8 +72,11 @@ The LM-KBC shared task series \citep{lmkbc2023,lmkbc2024} probes how much
 factual knowledge language models can turn into knowledge base entries:
 given a subject and a relation, a system must output \emph{all} correct
 object values---possibly none, one, or hundreds---under closed-book
-conditions: no retrieval, no external corpora, no fine-tuning, and at most
-32B neural parameters at inference.
+conditions: no external search or corpora, no fine-tuning, and at most
+32B neural parameters at inference. Two words carry the argument of this
+paper. By \emph{retrieval} we mean the model producing a stored value
+from its own weights, and by \emph{rejection} we mean discarding a
+candidate it has already produced.
 
 Under these conditions everything we can change happens at inference time: model
 choice, prompts, sampling, and aggregation over samples. Our development
