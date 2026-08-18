@@ -5,8 +5,8 @@ Usage:
       --pool outputs/screening/pool.jsonl [--pool ...] --out preds.jsonl \
       [--alias-graph train.jsonl val.jsonl] [--rename-map map.json]
 
-Aggregations are the val-validated set behind v12: area/capacity =
-dominant cluster; city = surface majority >= 12 on the occ register (v18; 8 before); award =
+Aggregations are the val-validated set behind v12-v19: area/capacity =
+dominant cluster; city = surface majority (12 for v18, 14 for v19); award =
 frequency >= 0.1; borders = frequency >= 0.3 with empty-majority 10; company
 = casefold + acronym folding, frequency >= 0.5, empty-majority 12. With
 --alias-graph, string surfaces are folded onto public gold entity classes
@@ -31,7 +31,7 @@ def norm(s: str) -> str:
     return s.strip().casefold()
 
 
-def surface_city(cands, fold):
+def surface_city(cands, fold, min_votes=12):
     cnt, surf = Counter(), {}
     for c in cands:
         if not c:
@@ -42,7 +42,7 @@ def surface_city(cands, fold):
         cnt[k] += 1
         surf.setdefault(k, s.strip())
     w, v = cnt.most_common(1)[0]
-    return [surf[w]] if (w != "" and v >= 12) else []
+    return [surf[w]] if (w != "" and v >= min_votes) else []
 
 
 def freq_multi(cands, th, fold, em=99):
@@ -106,7 +106,7 @@ def load_pools(paths, rename):
     return pools
 
 
-def compose(rows, pools, graph):
+def compose(rows, pools, graph, city_min_votes=12):
     out, missing = [], []
     for r in rows:
         rel, s = r["Relation"], r["SubjectEntity"]
@@ -118,7 +118,7 @@ def compose(rows, pools, graph):
         elif rel in ("hasArea", "hasCapacity"):
             obj = aggregate_dominant_cluster(cands) or []
         elif rel == "personHasCityOfDeath":
-            obj = surface_city(cands, fold)
+            obj = surface_city(cands, fold, city_min_votes)
         elif rel == "awardWonBy":
             obj = freq_multi(cands, 0.1, fold)
         elif rel == "countryLandBordersCountry":
@@ -138,14 +138,20 @@ def main():
                     help="gold files to build the public alias graph from")
     ap.add_argument("--rename-map", default=None,
                     help="json {relation|old_subject: new_subject}")
+    ap.add_argument("--city-min-votes", type=int, default=12,
+                    help="minimum votes for a non-empty city (V19 uses 14)")
+    ap.add_argument("--strict", action="store_true",
+                    help="fail instead of emitting empty predictions for missing pools")
     a = ap.parse_args()
     rows = [json.loads(l) for l in open(a.rows, encoding="utf-8")]
     rename = json.load(open(a.rename_map, encoding="utf-8")) if a.rename_map else {}
     pools = load_pools(a.pool, rename)
     graph = AliasGraph.from_gold(*a.alias_graph) if a.alias_graph else None
-    out, missing = compose(rows, pools, graph)
+    out, missing = compose(rows, pools, graph, a.city_min_votes)
     if missing:
         print("WARNING missing pool rows:", missing, file=sys.stderr)
+        if a.strict:
+            raise SystemExit(f"missing candidate pools for {len(missing)} rows")
     with open(a.out, "w", encoding="utf-8") as f:
         for r in out:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")

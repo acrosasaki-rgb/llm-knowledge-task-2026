@@ -1,8 +1,9 @@
 # AKBC Shared Task 2026 baseline
 
 This is the public code release accompanying our AKBC 2026 shared task system
-paper (`paper/main.tex`, `paper/main.pdf`). The step-by-step reproduction
-recipe is [`docs/V4_REPRODUCE.md`](docs/V4_REPRODUCE.md), and the
+paper (`paper/main.tex`, `paper/main.pdf`). The submitted V19 system's
+step-by-step reproduction recipe is
+[`docs/V19_REPRODUCE.md`](docs/V19_REPRODUCE.md), and the
 per-experiment records are the remaining files under `docs/`. Internal CI
 definitions and infrastructure notes from our development repository are not
 part of this release.
@@ -14,7 +15,23 @@ comparison report.
 
 The challenge dataset is not copied into this repository. Local runs may use
 the sibling `../dataset2026` checkout. CI fetches the exact official commit
-configured by `DATASET2026_REF` in `.gitlab-ci.yml`.
+specified by each reproduction recipe.
+
+## Submitted V19 inference
+
+On a Linux NVIDIA Docker host, after checking out the dataset commit listed in
+the V19 recipe:
+
+```bash
+AKBC_DATASET_DIR=../dataset2026 AKBC_SPLIT=test \
+  bash scripts/h100-bf16/run-v19-docker.sh
+```
+
+This single command runs the pinned Gemma-3-27B-pt Q8_0 model, generates the
+20-candidate V19 pool, applies the final relation-specific aggregation, and
+validates the official submission schema. See
+[`docs/V19_REPRODUCE.md`](docs/V19_REPRODUCE.md) for hardware, model revision,
+output, and digest details.
 
 ## Local verification
 
