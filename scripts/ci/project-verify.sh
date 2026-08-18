@@ -18,6 +18,8 @@ fi
 "${python_cmd[@]}" -m compileall -q src tests
 "${python_cmd[@]}" -m pytest
 bash -n \
+  scripts/h100-bf16/run-v19-docker.sh \
+  scripts/h100-bf16/run-v19-container.sh \
   scripts/submission/run-qwen27b-mtp-docker.sh \
   scripts/submission/run-qwen27b-mtp-container.sh \
   scripts/submission/run-qwen27b-mtp-relation-aware-20-docker.sh
