@@ -16,7 +16,15 @@ fi
 
 "${python_cmd[@]}" -m pip install --disable-pip-version-check -e ".[dev]"
 "${python_cmd[@]}" -m compileall -q src tests
-"${python_cmd[@]}" -m pytest
+if "${python_cmd[@]}" -c 'import sys; raise SystemExit(sys.platform != "win32")'; then
+  # Running the long-lived concurrency test after the other 144 tests can
+  # receive a spurious KeyboardInterrupt from the Windows Python runtime.
+  # Separate processes preserve the same coverage and keep local verification stable.
+  "${python_cmd[@]}" -m pytest --ignore=tests/test_run.py
+  "${python_cmd[@]}" -m pytest tests/test_run.py
+else
+  "${python_cmd[@]}" -m pytest
+fi
 bash -n \
   scripts/h100-bf16/run-v19-docker.sh \
   scripts/h100-bf16/run-v19-container.sh \
